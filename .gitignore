@@ -1,0 +1,28 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Output of the go tool
+bin/
+pkg/
+
+# Build
+*.out
+*.log
+
+# Dependency directories (vendor directories)
+vendor/
+
+# Local environment variables
+.env
+
+# Database files (si no quieres subir tu DB local)
+*.db
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store

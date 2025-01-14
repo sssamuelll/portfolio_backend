@@ -3,8 +3,8 @@ package services
 import (
 	"encoding/json"
 
-	"github.com/portfolio-backend/models"
-	"github.com/portfolio-backend/storage"
+	"github.com/sssamuelll/portfolio_backend/models"
+	"github.com/sssamuelll/portfolio_backend/storage"
 )
 
 func GetAllPosts() ([]models.Post, error) {

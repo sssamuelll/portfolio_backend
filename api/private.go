@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/portfolio-backend/models"
-	"github.com/portfolio-backend/services"
+	"github.com/sssamuelll/portfolio_backend/models"
+	"github.com/sssamuelll/portfolio_backend/services"
 )
 
 func CreatePost(c *gin.Context) {

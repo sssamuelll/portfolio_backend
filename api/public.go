@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/portfolio-backend/services"
+	"github.com/sssamuelll/portfolio_backend/services"
 )
 
 func GetPublicPosts(c *gin.Context) {
