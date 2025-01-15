@@ -25,6 +25,7 @@ func main() {
 	router.POST("/api/public/login", api.Login)
 	router.POST("/api/public/register", api.Register)
 	router.GET("/api/public/posts", api.GetPublicPosts)
+	router.POST("/api/public/verify_code", api.VerifyCode)
 
 	// Rutas privadas
 	private := router.Group("/api/private")

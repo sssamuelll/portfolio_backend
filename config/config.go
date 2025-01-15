@@ -3,15 +3,17 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Port       string
-	SecretKey  string
-	Database   string
-	IssuerName string
+	Port          string
+	SecretKey     string
+	Database      string
+	IssuerName    string
+	AllowedEmails map[string]bool
 }
 
 var AppConfig Config
@@ -28,6 +30,9 @@ func LoadConfig() {
 		SecretKey:  getEnv("SECRET_KEY", "your_secret_key"),
 		Database:   getEnv("DATABASE", "./portfolio.db"),
 		IssuerName: getEnv("ISSUER_NAME", "PortfolioBackend"),
+		AllowedEmails: parseAllowedEmails(
+			getEnv("ALLOWED_EMAILS", ""),
+		),
 	}
 }
 
@@ -37,4 +42,13 @@ func getEnv(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func parseAllowedEmails(emails string) map[string]bool {
+	emailList := strings.Split(emails, ",")
+	emailMap := make(map[string]bool, len(emailList))
+	for _, email := range emailList {
+		emailMap[email] = true
+	}
+	return emailMap
 }

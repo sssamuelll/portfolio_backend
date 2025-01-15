@@ -1,9 +1,10 @@
 package models
 
 type User struct {
-	ID         int    `json:"id" db:"id"`
-	Username   string `json:"username" db:"username"`
-	Password   string `json:"-" db:"password"` // con "-" para no exponerlo en JSON
-	Email      string `json:"email" db:"email"`
-	SecretTOTP string `json:"-" db:"secret_totp"` // para guardar el secret de TOTP
+	ID          uint   `gorm:"primaryKey"`
+	Username    string `gorm:"unique;not null"`
+	Password    string `gorm:"not null"`
+	Email       string `gorm:"unique;not null"`
+	SecretTOTP  string
+	PendingCode string
 }

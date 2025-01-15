@@ -2,43 +2,51 @@ package services
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/sssamuelll/portfolio_backend/models"
 	"github.com/sssamuelll/portfolio_backend/storage"
 )
 
+// GetAllPosts obtiene todos los posts desde la base de datos
 func GetAllPosts() ([]models.Post, error) {
-	rows, err := storage.DB.Query("SELECT * FROM posts")
+	var posts []models.Post
+	err := storage.DB.Find(&posts).Error
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var posts []models.Post
-	for rows.Next() {
-		var post models.Post
-		var tags, media string
-		if err := rows.Scan(&post.ID, &post.Image, &post.Name, &post.Description, &post.Category, &tags, &media, &post.StartDate, &post.EndDate, &post.Link); err != nil {
-			return nil, err
+	// Convertir cadenas JSON a arreglos en Tags y Media
+	for i := range posts {
+		if posts[i].TagsJSON != "" {
+			if err := json.Unmarshal([]byte(posts[i].TagsJSON), &posts[i].Tags); err != nil {
+				return nil, errors.New("failed to parse tags JSON")
+			}
 		}
-
-		// Convertir JSON strings a arrays
-		json.Unmarshal([]byte(tags), &post.Tags)
-		json.Unmarshal([]byte(media), &post.Media)
-
-		posts = append(posts, post)
+		if posts[i].MediaJSON != "" {
+			if err := json.Unmarshal([]byte(posts[i].MediaJSON), &posts[i].Media); err != nil {
+				return nil, errors.New("failed to parse media JSON")
+			}
+		}
 	}
 	return posts, nil
 }
 
+// CreatePost crea un nuevo post en la base de datos
 func CreatePost(post *models.Post) error {
-	tagsJSON, _ := json.Marshal(post.Tags)
-	mediaJSON, _ := json.Marshal(post.Media)
+	// Convertir Tags y Media a JSON
+	tagsJSON, err := json.Marshal(post.Tags)
+	if err != nil {
+		return errors.New("failed to convert tags to JSON")
+	}
+	mediaJSON, err := json.Marshal(post.Media)
+	if err != nil {
+		return errors.New("failed to convert media to JSON")
+	}
 
-	query := `
-	INSERT INTO posts (image, name, description, category, tags, media, start_date, end_date, link)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`
-	_, err := storage.DB.Exec(query, post.Image, post.Name, post.Description, post.Category, tagsJSON, mediaJSON, post.StartDate, post.EndDate, post.Link)
-	return err
+	post.TagsJSON = string(tagsJSON)
+	post.MediaJSON = string(mediaJSON)
+
+	// Guardar el post en la base de datos
+	return storage.DB.Create(post).Error
 }

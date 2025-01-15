@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sssamuelll/portfolio_backend/config"
 	"github.com/sssamuelll/portfolio_backend/models"
 	"github.com/sssamuelll/portfolio_backend/services"
 	// Añade aquí las importaciones que necesites (bcrypt, etc.)
@@ -20,7 +21,7 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
-// Login endpoint para iniciar sesión y recibir el JWT
+// Login step 1: Verify credentials and send 2FA code
 func Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -28,22 +29,54 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Verificar credenciales en la base de datos
-	// Aquí lo ideal es que tengas un modelo "User" y
-	// verifiques su existencia y contraseña (Hasheada con bcrypt, etc.)
 	user, err := services.GetUserByUsername(req.Username)
-	if err != nil {
+	if err != nil || !services.CheckPassword(user.Password, req.Password) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
-	// Validar la contraseña (asumiendo que user.Password esté hasheada con bcrypt)
-	if !services.CheckPassword(user.Password, req.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+	// Generate and send 2FA code
+	code := services.GenerateEmailCode()
+	if err := services.SendEmail(user.Email, "Your 2FA Code", "Your code: "+code); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
 		return
 	}
 
-	// Generar JWT
+	// Save code in the database
+	if err := services.SavePendingCode(user.Username, code); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save code"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "2FA code sent to your email"})
+}
+
+// Login step 2: Validate 2FA code
+type VerifyCodeRequest struct {
+	Username string `json:"username" binding:"required"`
+	Code     string `json:"code" binding:"required"`
+}
+
+func VerifyCode(c *gin.Context) {
+	var req VerifyCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	user, err := services.GetUserByUsername(req.Username)
+	if err != nil || user.PendingCode != req.Code {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid code"})
+		return
+	}
+
+	// Clear the pending code
+	if err := services.ClearPendingCode(req.Username); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear code"})
+		return
+	}
+
+	// Generate JWT
 	token, err := services.GenerateJWT(user.Username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
@@ -69,14 +102,20 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// Hashear contraseña
+	// Verify email is in the allowed list
+	if !config.AppConfig.AllowedEmails[req.Email] {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Email not allowed for registration"})
+		return
+	}
+
+	// Hash the password
 	hashedPassword, err := services.HashPassword(req.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
 		return
 	}
 
-	// Crear el usuario en DB
+	// Create the user in the database
 	user := models.User{
 		Username: req.Username,
 		Password: hashedPassword,

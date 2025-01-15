@@ -1,37 +1,38 @@
 package storage
 
 import (
-	"database/sql"
 	"log"
 
-	_ "github.com/mattn/go-sqlite3"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+
+	"github.com/sssamuelll/portfolio_backend/models"
 )
 
-var DB *sql.DB
+var DB *gorm.DB
 
+// InitDatabase initializes the database connection and runs migrations
 func InitDatabase() {
 	var err error
-	DB, err = sql.Open("sqlite3", "./portfolio.db")
+
+	// Conexión a la base de datos SQLite
+	DB, err = gorm.Open(sqlite.Open("./portfolio.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Crear tabla `posts` si no existe
-	createTableQuery := `
-	CREATE TABLE IF NOT EXISTS posts (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		image TEXT,
-		name TEXT NOT NULL,
-		description TEXT,
-		category TEXT NOT NULL,
-		tags TEXT,
-		media TEXT,
-		start_date TEXT,
-		end_date TEXT,
-		link TEXT
-	);`
-	_, err = DB.Exec(createTableQuery)
+	// Ejecutar migraciones
+	RunMigrations()
+}
+
+// RunMigrations ejecuta las migraciones de la base de datos
+func RunMigrations() {
+	err := DB.AutoMigrate(
+		&models.User{},
+		&models.Post{},
+	)
 	if err != nil {
-		log.Fatalf("Failed to create table: %v", err)
+		log.Fatalf("Failed to run migrations: %v", err)
 	}
+	log.Println("Database migrations completed successfully.")
 }

@@ -1,10 +1,10 @@
 package services
 
 import (
-	"database/sql"
 	"errors"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 
 	"github.com/sssamuelll/portfolio_backend/models"
 	"github.com/sssamuelll/portfolio_backend/storage"
@@ -12,30 +12,25 @@ import (
 
 // CreateUser inserta un usuario en la base de datos
 func CreateUser(user *models.User) error {
-	query := `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`
-	_, err := storage.DB.Exec(query, user.Username, user.Email, user.Password)
-	return err
+	return storage.DB.Create(user).Error
 }
 
 // GetUserByUsername obtiene un usuario por su username
 func GetUserByUsername(username string) (*models.User, error) {
-	query := `SELECT id, username, password, email, secret_totp FROM users WHERE username = ?`
-	row := storage.DB.QueryRow(query, username)
-
-	var u models.User
-	err := row.Scan(&u.ID, &u.Username, &u.Password, &u.Email, &u.SecretTOTP)
-	if err == sql.ErrNoRows {
+	var user models.User
+	err := storage.DB.Where("username = ?", username).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("user not found")
-	} else if err != nil {
+	}
+	if err != nil {
 		return nil, err
 	}
-
-	return &u, nil
+	return &user, nil
 }
 
 // HashPassword hashea la contraseña usando bcrypt
 func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 10) // cost=10
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	return string(bytes), err
 }
 
@@ -47,9 +42,9 @@ func CheckPassword(hashed, plain string) bool {
 
 // SaveTOTPSecret guarda el secret TOTP en la DB
 func SaveTOTPSecret(username, secret string) error {
-	query := `UPDATE users SET secret_totp = ? WHERE username = ?`
-	_, err := storage.DB.Exec(query, secret, username)
-	return err
+	return storage.DB.Model(&models.User{}).
+		Where("username = ?", username).
+		Update("secret_totp", secret).Error
 }
 
 // GetTOTPSecret obtiene el secret TOTP de un usuario
@@ -59,4 +54,18 @@ func GetTOTPSecret(username string) (string, error) {
 		return "", err
 	}
 	return user.SecretTOTP, nil
+}
+
+// SavePendingCode saves the 2FA code for a user
+func SavePendingCode(username, code string) error {
+	return storage.DB.Model(&models.User{}).
+		Where("username = ?", username).
+		Update("pending_code", code).Error
+}
+
+// ClearPendingCode clears the 2FA code for a user
+func ClearPendingCode(username string) error {
+	return storage.DB.Model(&models.User{}).
+		Where("username = ?", username).
+		Update("pending_code", "").Error
 }

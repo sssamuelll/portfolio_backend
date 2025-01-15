@@ -1,14 +1,16 @@
 package models
 
 type Post struct {
-	ID          int    `json:"id" db:"id"`
-	Image       string `json:"image" db:"image"`
-	Name        string `json:"name" db:"name"`
-	Description string `json:"description" db:"description"`
-	Category    string `json:"category" db:"category"`
-	Tags        string `json:"tags" db:"tags"`   // Almacenar como JSON o CSV
-	Media       string `json:"media" db:"media"` // Almacenar como JSON o CSV
-	StartDate   string `json:"startDate,omitempty" db:"start_date"`
-	EndDate     string `json:"endDate,omitempty" db:"end_date"`
-	Link        string `json:"link,omitempty" db:"link"`
+	ID          uint     `gorm:"primaryKey"`
+	Image       string   `json:"image"`
+	Name        string   `json:"name" gorm:"not null"`
+	Description string   `json:"description"`
+	Category    string   `json:"category" gorm:"not null"`
+	Tags        []string `gorm:"-" json:"tags"`
+	TagsJSON    string   `json:"-" gorm:"column:tags"`
+	Media       []string `gorm:"-" json:"media"`
+	MediaJSON   string   `json:"-" gorm:"column:media"`
+	StartDate   string   `json:"startDate"`
+	EndDate     string   `json:"endDate"`
+	Link        string   `json:"link"`
 }
