@@ -129,7 +129,8 @@ func Register(c *gin.Context) {
 	}
 
 	if err := services.CreateUser(&user); err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Username or email already exists"})
+		// Muestra el error real
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
 
