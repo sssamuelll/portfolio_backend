@@ -39,7 +39,7 @@ func main() {
 		// Otros endpoints privados
 		private.POST("/posts", api.CreatePost)
 	}
-
+	log.Println("Using database file:", config.AppConfig.Database)
 	log.Printf("Server is running on http://localhost:%s", config.AppConfig.Port)
 	router.Run(":" + config.AppConfig.Port)
 }
