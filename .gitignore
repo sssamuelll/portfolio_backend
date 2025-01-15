@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+app
 
 # Output of the go tool
 bin/
