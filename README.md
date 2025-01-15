@@ -1,128 +1,218 @@
-# Portfolio Backend
+# Technical Documentation for the Backend of my Portfolio
 
-This project serves as the backend for the portfolio, designed to handle authentication (JWT + TOTP), post publishing, and user management using `Gin`, `SQLite`, and other modern tools from the Go ecosystem.
+## Introduction
 
-## Project Structure
-
-```
-portfolio-backend/
-├── main.go        # Main entry point of the application
-├── api/           # Public and private endpoints
-│   ├── auth.go       # Authentication-related routes
-│   ├── public.go     # Public routes
-│   ├── private.go    # Private routes
-├── models/        # Data models
-│   ├── user.go       # User model
-│   ├── post.go       # Post model
-├── services/      # Business logic
-│   ├── auth.go       # JWT and TOTP handling
-│   ├── users.go      # User management
-│   ├── posts.go      # Post management
-├── storage/       # Persistence layer
-│   ├── database.go   # Database initialization
-├── middlewares/   # Middleware
-│   ├── auth.go       # JWT validation middleware
-├── config/        # Project configuration
-│   ├── config.go    
-├── .gitignore     # Ignored files and directories by Git
-├── go.mod         # Dependencies
-├── go.sum         # Dependency hashes
-└── .env           # Environment variables (ignored by Git)
-```
-
-## Features
-
-### Authentication
-- **JWT:** Token generation and validation to secure private routes.
-- **TOTP (Two-Factor Authentication):** Optional integration for an additional security layer.
-
-### User Management
-- Registration and authentication.
-- Secure password storage (bcrypt).
-- Storage of TOTP secrets.
-
-### Post Management
-- Creation and retrieval of posts.
-- Use of JSON to store tags and associated media.
-
-### Database
-- **SQLite:** Lightweight embedded database.
-- Automatic table creation on project initialization.
-
-### Configuration
-- Use of a `.env` file to define variables such as the execution port and secret key.
-
-## Installation and Setup
-
-### Prerequisites
-- Go 1.18+
-- SQLite3 installed (optional if the appropriate Go binary is available).
-
-### Steps
-1. Clone the repository:
-   ```bash
-   git clone <URL_REPO>
-   cd portfolio-backend
-   ```
-
-2. Install dependencies:
-   ```bash
-   go mod tidy
-   ```
-
-3. Configure environment variables in a `.env` file:
-   ```env
-   PORT=8080
-   SECRET_KEY=my_very_secret_password
-   DATABASE=./portfolio.db
-   ISSUER_NAME=PortfolioBackend
-   ```
-
-4. Run the application:
-   ```bash
-   go run main.go
-   ```
-
-5. The application will be available at `http://localhost:8080`.
-
-## Key Routes
-
-### Public
-- `POST /api/public/login`: Authenticate and generate a JWT token.
-- `POST /api/public/register`: Register a new user.
-
-### Private (Protected by JWT)
-- `POST /api/private/totp/setup`: Initial TOTP setup.
-- `POST /api/private/totp/verify`: TOTP code verification.
-- `POST /api/private/posts`: Create a new post.
-
-## Ignored Files by Git
-
-- `.env`: Contains sensitive environment variables.
-- Compiled binaries and directories like `bin/` and `pkg/`.
-- Temporary files from operating systems or IDEs, such as `.DS_Store`, `.vscode/`, `.idea/`.
-
-## Testing
-
-It is recommended to use tools like [Postman](https://www.postman.com/) or [Thunder Client](https://marketplace.visualstudio.com/items?itemName=rangav.vscode-thunder-client) to test the endpoints.
-
-## Contributions
-
-1. Fork the project.
-2. Create a new branch for your changes:
-   ```bash
-   git checkout -b feature/new-feature
-   ```
-3. Make your changes and create a descriptive commit:
-   ```bash
-   git commit -m "Added new feature X"
-   ```
-4. Push the changes to your fork and open a pull request.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
+The backend implements a portfolio management system using the `Gin` framework in Go. It includes features like 2FA authentication, user management, post handling, and security configurations.
 
 ---
 
-Thank you for contributing and using this project!
+## Project Structure
+
+### Main Files and Directories
+
+- **api/**: Contains controllers for handling API routes.
+- **config/**: Manages application configuration.
+- **middlewares/**: Includes middlewares (JWT authentication).
+- **models/**: Defines data models.
+- **services/**: Provides business logic and helper functions.
+- **storage/**: Sets up the database connection.
+- **main.go**: Application entry point.
+- **.env**: Stores environment variables.
+
+---
+
+## File Descriptions
+
+### `api/auth.go`
+
+Defines endpoints related to authentication and user management:
+
+#### Endpoints
+
+1. **`POST /api/public/login`**: Initial authentication, sends 2FA code to the user’s email.
+2. **`POST /api/public/verify_code`**: Verifies the 2FA code and generates a JWT token.
+3. **`POST /api/public/register`**: Registers a new user.
+4. **`POST /api/private/totp/setup`**: Sets up 2FA for an authenticated user.
+5. **`POST /api/private/totp/verify`**: Validates a TOTP code.
+
+---
+
+### `auth/private.go`
+
+Provides private endpoints for post management:
+
+#### Endpoints
+
+1. **`POST /api/private/posts`**: Creates a new post.
+
+---
+
+### `api/public.go`
+
+Handles public endpoints related to posts:
+
+#### Endpoints
+
+1. **`GET /api/public/posts`**: Retrieves all public posts.
+
+---
+
+### `config/config.go`
+
+Loads configurations from a `.env` file and initializes them:
+
+#### Functions
+
+- **`LoadConfig`**: Reads environment variables.
+- **`parseAllowedEmails`**: Converts a list of allowed emails into a map.
+
+---
+
+### `middlewares/auth.go`
+
+Implements the JWT authentication middleware:
+
+#### Functions
+
+- **`AuthenticateJWT`**: Validates the JWT token and adds claims to the context.
+
+---
+
+### `models/post.go`
+
+Defines the `Post` model:
+
+#### Attributes
+
+- `ID`, `Image`, `Name`, `Description`, `Category`, `Tags`, `Media`, `StartDate`, `EndDate`, `Link`.
+
+### `models/user.go`
+
+Defines the `User` model:
+
+#### Attributes
+
+- `ID`, `Username`, `Password`, `Email`, `SecretTOTP`, `PendingCode`.
+
+---
+
+### `services/auth.go`
+
+Provides services related to JWT and TOTP:
+
+#### Functions
+
+1. **`GenerateJWT`**: Generates a JWT token.
+2. **`ValidateJWT`**: Validates a JWT token.
+3. **`GenerateTOTP`**: Generates a URL and secret for TOTP.
+
+---
+
+### `services/email.go`
+
+Handles email-related functionality:
+
+#### Functions
+
+1. **`GenerateEmailCode`**: Generates a random code.
+2. **`SendEmail`**: Sends an email using SMTP.
+
+---
+
+### `services/posts.go`
+
+Provides services to manage posts:
+
+#### Functions
+
+1. **`GetAllPosts`**: Retrieves all posts.
+2. **`CreatePost`**: Creates a new post.
+
+---
+
+### `services/totp.go`
+
+Provides services for TOTP code generation and validation:
+
+#### Functions
+
+1. **`GenerateTOTPSecret`**: Generates a new TOTP secret.
+2. **`GenerateTOTPCode`**: Generates a TOTP code based on a secret.
+3. **`ValidateTOTP`**: Validates a TOTP code.
+
+---
+
+### `services/users.go`
+
+Handles user management:
+
+#### Functions
+
+1. **`CreateUser`**: Creates a user in the database.
+2. **`GetUserByUsername`**: Retrieves a user by username.
+3. **`HashPassword`**: Hashes a password.
+4. **`CheckPassword`**: Compares plain text and hashed passwords.
+5. **`SaveTOTPSecret`**, **`GetTOTPSecret`**: Manages TOTP secrets.
+
+---
+
+### `storage/database.go`
+
+Configures the SQLite database connection and runs migrations.
+
+#### Functions
+
+1. **`InitDatabase`**: Initializes the database connection.
+2. **`RunMigrations`**: Runs migrations for defined models.
+
+---
+
+### `.env`
+
+Contains the following environment variables:
+
+- `PORT`: Application port.
+- `SECRET_KEY`: Secret key for JWT.
+- `DATABASE`: Database path.
+- `ISSUER_NAME`: JWT issuer name.
+- `ALLOWED_EMAILS`: List of allowed email addresses.
+
+---
+
+### `main.go`
+
+Entry point that initializes configuration, database, and routes:
+
+1. **Public Routes**: Login, registration, 2FA verification, and post retrieval.
+2. **Private Routes**: 2FA setup and post management.
+3. **Middleware**: CORS and JWT authentication.
+
+---
+
+## Configuration
+
+To run the project:
+
+1. Configure variables in `.env`.
+2. Initialize the database with `InitDatabase()`.
+3. Start the server with `go run main.go`.
+
+---
+
+## Dependencies
+
+- **`gin`**: HTTP framework for Go.
+- **`gorm`**: ORM for database management.
+- **`bcrypt`**: Password hashing.
+- **`totp`**: TOTP generation and validation.
+- **`godotenv`**: Environment variable management.
+
+---
+
+## Future Improvements
+
+1. Implement unit tests for endpoints and services.
+2. Add support for additional databases (e.g., PostgreSQL).
+3. Enhance error handling for clearer messages.
+
+---
