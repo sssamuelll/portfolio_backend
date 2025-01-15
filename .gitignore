@@ -26,3 +26,7 @@ vendor/
 .vscode/
 .idea/
 .DS_Store
+
+# DKIM Private Key
+dkim_private_key.txt
+

@@ -1,32 +1,52 @@
 package services
 
 import (
+	"bytes"
 	"fmt"
-	"math/rand"
 	"net/smtp"
-	"time"
+
+	"github.com/sssamuelll/portfolio_backend/config"
+	dkim "github.com/toorop/go-dkim"
 )
 
-const emailCodeLength = 6
-
-func GenerateEmailCode() string {
-	rand.NewSource(time.Now().UnixNano())
-	code := ""
-	for i := 0; i < emailCodeLength; i++ {
-		code += fmt.Sprintf("%d", rand.Intn(10))
-	}
-	return code
-}
-
 func SendEmail(to, subject, body string) error {
-	from := "your_email@gmail.com" // Replace with your email
-	password := "your_email_password"
+	from := config.AppConfig.EmailSender
+	password := config.AppConfig.EmailPassword
+	smtpServer := config.AppConfig.SMTPServer
+	smtpPort := config.AppConfig.SMTPPort
+	privateKey := config.AppConfig.DKIMPrivateKey
+	domain := config.AppConfig.DKIMDomain
+	selector := config.AppConfig.DKIMSelector
 
-	msg := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\n\n%s", from, to, subject, body)
+	// Email headers
+	headers := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\n\n", from, to, subject)
+	message := headers + body
 
-	smtpServer := "smtp.gmail.com"
+	// DKIM settings
+	dkimOptions := dkim.NewSigOptions()
+	dkimOptions.PrivateKey = []byte(privateKey)
+	dkimOptions.Domain = domain
+	dkimOptions.Selector = selector
+	dkimOptions.Headers = []string{"from", "to", "subject"}
+	dkimOptions.BodyLength = 0
+
+	// Sign the email with DKIM
+	var signedMessage bytes.Buffer
+	messageBytes := []byte(message)
+	err := dkim.Sign(&messageBytes, dkimOptions)
+	if err != nil {
+		return fmt.Errorf("failed to sign email with DKIM: %v", err)
+	}
+	signedMessage.Write(messageBytes)
+
+	// SMTP authentication
 	auth := smtp.PlainAuth("", from, password, smtpServer)
 
-	err := smtp.SendMail(smtpServer+":587", auth, from, []string{to}, []byte(msg))
-	return err
+	// Send the email
+	err = smtp.SendMail(smtpServer+":"+smtpPort, auth, from, []string{to}, signedMessage.Bytes())
+	if err != nil {
+		return fmt.Errorf("failed to send email: %v", err)
+	}
+
+	return nil
 }
