@@ -3,10 +3,10 @@ package storage
 import (
 	"log"
 
+	"github.com/sssamuelll/portfolio_backend/config"
+	"github.com/sssamuelll/portfolio_backend/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-
-	"github.com/sssamuelll/portfolio_backend/models"
 )
 
 var DB *gorm.DB
@@ -16,7 +16,7 @@ func InitDatabase() {
 	var err error
 
 	// Conexión a la base de datos SQLite
-	DB, err = gorm.Open(sqlite.Open("./portfolio.db"), &gorm.Config{})
+	DB, err = gorm.Open(sqlite.Open(config.AppConfig.Database), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
