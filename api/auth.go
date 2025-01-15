@@ -35,14 +35,16 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Generate and send 2FA code
-	code := services.GenerateEmailCode()
+	// Generar código TOTP
+	code := services.GenerateTOTPCode(user.SecretTOTP)
+
+	// Enviar código TOTP al email del usuario
 	if err := services.SendEmail(user.Email, "Your 2FA Code", "Your code: "+code); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
 		return
 	}
 
-	// Save code in the database
+	// Guardar código temporal en la base de datos
 	if err := services.SavePendingCode(user.Username, code); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save code"})
 		return
@@ -65,18 +67,18 @@ func VerifyCode(c *gin.Context) {
 	}
 
 	user, err := services.GetUserByUsername(req.Username)
-	if err != nil || user.PendingCode != req.Code {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid code"})
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username"})
 		return
 	}
 
-	// Clear the pending code
-	if err := services.ClearPendingCode(req.Username); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear code"})
+	// Validar código TOTP con el secreto del usuario
+	if !services.ValidateTOTP(user.SecretTOTP, req.Code) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid 2FA code"})
 		return
 	}
 
-	// Generate JWT
+	// Generar JWT
 	token, err := services.GenerateJWT(user.Username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
@@ -102,24 +104,28 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// Verify email is in the allowed list
+	// Verificar si el email está permitido
 	if !config.AppConfig.AllowedEmails[req.Email] {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Email not allowed for registration"})
 		return
 	}
 
-	// Hash the password
+	// Hashear contraseña
 	hashedPassword, err := services.HashPassword(req.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
 		return
 	}
 
-	// Create the user in the database
+	// Generar secreto TOTP
+	secret := services.GenerateTOTPSecret()
+
+	// Crear el usuario en la base de datos
 	user := models.User{
-		Username: req.Username,
-		Password: hashedPassword,
-		Email:    req.Email,
+		Username:   req.Username,
+		Password:   hashedPassword,
+		Email:      req.Email,
+		SecretTOTP: secret,
 	}
 
 	if err := services.CreateUser(&user); err != nil {

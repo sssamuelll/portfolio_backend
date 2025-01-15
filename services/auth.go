@@ -55,8 +55,3 @@ func GenerateTOTP(username string) (string, string, error) {
 	// URL para generar un QR code
 	return key.URL(), key.Secret(), nil
 }
-
-// ValidateTOTP valida un código TOTP generado por el usuario
-func ValidateTOTP(secret string, code string) bool {
-	return totp.Validate(code, secret)
-}
